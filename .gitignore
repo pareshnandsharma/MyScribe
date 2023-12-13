@@ -1,0 +1,97 @@
+# .gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyo
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pyzw
+*.pyc/
+*.pyo/
+*.pyd/
+*.pyo/
+*.pyc/
+*.pyo/
+*.pyd/
+*.pyw/
+*.pyz/
+*.pyzw/
+
+# Virtual Environments
+venv/
+env/
+.venv/
+*.venv/
+pipenv/
+.Python
+envs/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg/
+*.egg-info/
+*.egg-info/
+*.egg-info/
+
+# .DS_Store (MacOS)
+.DS_Store
+
+# .vscode (Visual Studio Code)
+.vscode/
+
+# IntelliJ
+.idea/
+
+# Sublime Text
+.sublime-project
+.sublime-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Miscellaneous
+*.log
+*.pot
+*.pro
+*.orig
+*.rej
+*.bak
+*.swp
+*.tmp
+*.tmp/
+*.TMP/
+*.tmp/
+*.TMP/
+*.backup
+*.back
+*.bkp
+*.old
+*.new
+*.orig
+*.patch
+*.diff
+*.xlsx~
+*.xls~
+
+# Environment variables
+.env
