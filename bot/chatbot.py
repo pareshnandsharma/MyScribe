@@ -256,17 +256,11 @@ class ChatBot:
         Args:
             message: The Telegram message object.
         """
-        # if self.book_bot.book_cover:
-        #     # Send photo with caption if cover image available
-        #     self.bot.send_photo(message.chat.id, self.book_bot.book_cover, caption=self.book_bot.complete_book_details)
-        # else:
-        #     # Send message without cover image if not available
-        #     self.bot.send_message(message.chat.id, self.book_bot.complete_book_details)
         if self.book_bot.book_cover:
             self.bot.send_photo(message.chat.id, self.book_bot.book_cover, caption=self.book_bot.complete_book_details)
         else:
             self.bot.send_message(message.chat.id, self.book_bot.complete_book_details)
-        self.retrieve_book_status(message)
+        self.insert_book_status(message)
 
     def share_book_info_for_approval_and_edit(self, message: telebot.types.Message):
         """
@@ -347,27 +341,26 @@ class ChatBot:
                                                      self.current_book_status):
             self.bot.send_message(message.chat.id, "Sorry There was an error. Please Try Again")
         else:
-            self.update_reading_time_left(message)
+            self.process_book_status(message)
 
     def update_reading_time_left(self, message):
         if not self.book_database.update_reading_time_left(self.current_user_id, self.current_book_title):
             self.bot.send_message(message.chat.id, "Sorry There was an Error.")
-        else:
-            self.process_book_status(message)
 
-    def retrieve_book_status(self, message: telebot.types.Message):
-        print(self.current_book_status)
-        self.retrieved_book_status = self.book_database.retrieve_book_status_if_exists(self.current_user_id,
-                                                                                       self.current_book_title)
+    # def retrieve_book_status(self, message: telebot.types.Message):
+    #     self.retrieved_book_status = self.book_database.retrieve_book_status_if_exists(self.current_user_id, self.current_book_title)
+    #     if not self.retrieved_book_status:
+    #         self.insert_book_status(message)
+    #     else:
+    #         self.process_book_status(message)
 
     def process_book_status(self, message):
-        self.retrieve_book_status(message)
         if self.current_book_status == CURRENTLY_READING:
             self.process_currently_reading_book(message)
         elif self.current_book_status == COMPLETED:
-            self.process_currently_reading_book(message)
-        elif self.current_book_status == CURRENTLY_READING:
-            self.process_currently_reading_book(message)
+            self.process_completed_books(message)
+        elif self.current_book_status == WISHLIST:
+            self.process_wishlisted_books(message)
 
     def process_currently_reading_book(self, message):
         reading_time_left = self.retrieve_and_convert_reading_time_left()
@@ -387,7 +380,8 @@ class ChatBot:
             total_pages_read = self.book_database.retrieve_pages_read(self.current_user_id, self.current_book_title)
             total_pages = self.book_database.retrieve_total_pages(self.current_book_title)
             if total_pages_read + pages_read_today >= total_pages:
-                self.bot.send_message(message.chat.id, "Congratulations you have finsihed the book")
+                self.current_book_status = COMPLETED
+                self.insert_book_status(message)
             else:
                 if self.book_database.update_pages_read(self.current_user_id, self.current_book_title,
                                                         int(pages_read_today)):
@@ -403,7 +397,31 @@ class ChatBot:
             self.bot.register_next_step_handler(message, self.update_pages_read)
 
     def process_completed_books(self, message):
-        ...
+        self.book_database.update_pages_read(self.current_user_id, self.current_book_title, None)
+        self.bot.send_message(message.chat.id,
+                              f"Congratulations on finishing {self.current_book_title}. Please give it a rating "
+                              f"from 1-5 (5 being the highest)")
+
+    def insert_book_rating(self, message):
+        book_rating = message.text
+        if book_rating.isdigit():
+            if 0 < book_rating <= 5:
+                if self.book_database.insert_book_rating(self.current_user_id, self.current_book_title, book_rating):
+                    self.bot.send_message(message.chat.id,
+                                          f"You rated {self.current_book_title} {book_rating} out of 5")
+                else:
+                    self.bot.send_message(message.chat.id, "There was an error please try again.")
+            else:
+                self.bot.send_message(message.chat.id, "Please give a rating between 1-5")
+                self.bot.register_next_step_handler(message, self.insert_book_rating)
+        else:
+            self.bot.send_message(message.chat.id, "Please give a rating between 1-5")
+            self.bot.register_next_step_handler(message, self.insert_book_rating)
+
+    def process_wishlisted_books(self, message):
+        self.bot.send_message(message.chat.id,
+                              f"Congratulations!! You have successfully added {self.current_book_title}"
+                              f"to your wihslist.")
 
     def retrieve_and_convert_reading_time_left(self):
         """

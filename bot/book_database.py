@@ -73,6 +73,16 @@ class BookDatabase:
             print(e)
             return False
 
+    def insert_book_rating(self, telegram_id: int, book_title: str, book_rating):
+        book_id = self.retrieve_book_id(book_title)
+        try:
+            self.cur.execute("UPDATE table books_and_users SET rating = ? WHERE user_id = ? AND book_id = ?", (book_rating, telegram_id, book_id))
+        except sqlite3.Error as e:
+            print(e)
+            return False
+        else:
+            return True
+
     def check_if_user_exist(self, telegram_id: int) -> bool:
         """
         Checks if a user exists in the database by their Telegram ID.
@@ -252,12 +262,13 @@ class BookDatabase:
     def update_pages_read(self, telegram_id, book_title, pages_read) -> bool:
         book_id = self.retrieve_book_id(book_title)
         pages_read_yet = self.retrieve_pages_read(telegram_id, book_title)
-        if pages_read_yet:
-            total_pages = pages_read + int(pages_read_yet)
-        else:
-            total_pages = pages_read
-        print(pages_read, pages_read_yet, total_pages)
-        print(telegram_id, book_title)
+        if pages_read:
+            if pages_read_yet:
+                total_pages = pages_read + int(pages_read_yet)
+            else:
+                total_pages = pages_read
+            print(pages_read, pages_read_yet, total_pages)
+            print(telegram_id, book_title)
         try:
             self.cur.execute("UPDATE books_and_users SET pages_read = ? WHERE user_id = ? AND book_id = ?",
                              (total_pages, telegram_id, book_id))
