@@ -76,7 +76,8 @@ class BookDatabase:
     def insert_book_rating(self, telegram_id: int, book_title: str, book_rating):
         book_id = self.retrieve_book_id(book_title)
         try:
-            self.cur.execute("UPDATE table books_and_users SET rating = ? WHERE user_id = ? AND book_id = ?", (book_rating, telegram_id, book_id))
+            self.cur.execute("UPDATE books_and_users SET rating  = ? WHERE user_id = ? AND book_id = ?", (book_rating, telegram_id, book_id))
+            self.conn.commit()
         except sqlite3.Error as e:
             print(e)
             return False
@@ -164,7 +165,7 @@ class BookDatabase:
             else:
                 return None
 
-    def retrieve_book_status_if_exists(self, telegram_id: int, book_title: str) -> Optional[int]:
+    def check_if_book_status_exists(self, telegram_id: int, book_title: str) -> Optional[int]:
         """
         Retrieves the book's status (currently reading, completed, or wishlist) for a specific user if it exists in the database.
 
@@ -182,9 +183,9 @@ class BookDatabase:
         retrieved_book_status = self.cur.fetchone()
         print(retrieved_book_status)
         if retrieved_book_status:
-            return retrieved_book_status[0]
+            return True
         else:
-            return None
+            return False
 
     def retrieve_pages_read(self, telegram_id, book_title) -> Optional[int]:
         book_id = self.retrieve_book_id(book_title)
@@ -269,6 +270,8 @@ class BookDatabase:
                 total_pages = pages_read
             print(pages_read, pages_read_yet, total_pages)
             print(telegram_id, book_title)
+        else:
+            total_pages = None
         try:
             self.cur.execute("UPDATE books_and_users SET pages_read = ? WHERE user_id = ? AND book_id = ?",
                              (total_pages, telegram_id, book_id))

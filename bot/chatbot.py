@@ -337,11 +337,14 @@ class ChatBot:
         return int(reading_speed)
 
     def insert_book_status(self, message):
-        if not self.book_database.insert_book_status(self.current_user_id, self.current_book_title,
-                                                     self.current_book_status):
-            self.bot.send_message(message.chat.id, "Sorry There was an error. Please Try Again")
-        else:
+        if self.book_database.check_if_book_status_exists(self.current_user_id, self.current_book_title):
             self.process_book_status(message)
+        else:
+            if not self.book_database.insert_book_status(self.current_user_id, self.current_book_title,
+                                                         self.current_book_status):
+                self.bot.send_message(message.chat.id, "Sorry There was an error. Please Try Again")
+            else:
+                self.process_book_status(message)
 
     def update_reading_time_left(self, message):
         if not self.book_database.update_reading_time_left(self.current_user_id, self.current_book_title):
@@ -401,11 +404,12 @@ class ChatBot:
         self.bot.send_message(message.chat.id,
                               f"Congratulations on finishing {self.current_book_title}. Please give it a rating "
                               f"from 1-5 (5 being the highest)")
+        self.bot.register_next_step_handler(message, self.insert_book_rating)
 
     def insert_book_rating(self, message):
         book_rating = message.text
         if book_rating.isdigit():
-            if 0 < book_rating <= 5:
+            if 0 < int(book_rating) <= 5:
                 if self.book_database.insert_book_rating(self.current_user_id, self.current_book_title, book_rating):
                     self.bot.send_message(message.chat.id,
                                           f"You rated {self.current_book_title} {book_rating} out of 5")
@@ -420,8 +424,8 @@ class ChatBot:
 
     def process_wishlisted_books(self, message):
         self.bot.send_message(message.chat.id,
-                              f"Congratulations!! You have successfully added {self.current_book_title}"
-                              f"to your wihslist.")
+                              f"Congratulations!! You have successfully added {self.current_book_title} "
+                              f"to your wishlist.")
 
     def retrieve_and_convert_reading_time_left(self):
         """
@@ -549,10 +553,26 @@ class ChatBot:
             self.process_book_title_and_fetch_details(message)
 
         #
-        # @self.bot.message_handler(regexp=self.books_chat_patterns["book_finished"])
-        # def regex_finished_a_book(message: telebot.types.Message) -> None:
-        #     self.current_book_status = COMPLETED
-        #
+        @self.bot.message_handler(regexp=self.books_chat_patterns["book_finished"])
+        def regex_finished_a_book(message: telebot.types.Message) -> None:
+            self.current_book_status = COMPLETED
+            # Extract book title from message text
+            sentence = message.text
+            self.extract_book_title_from_regex(message, "reading_a_book", sentence)
+            self.process_book_title_and_fetch_details(message)
+
+        # @self.bot.message_handler(regexp=self.books_chat_patterns["wishlist_book"])
+        # def regex_wishlist_book(message: telebot.types.Message) -> None:
+        #     self.current_book_status = WISHLIST
+
+        @self.bot.message_handler(regexp=self.books_chat_patterns["book_wishlist"])
+        def regex_finished_a_book(message: telebot.types.Message) -> None:
+            self.current_book_status = WISHLIST
+            # Extract book title from message text
+            sentence = message.text
+            self.extract_book_title_from_regex(message, "book_wishlist", sentence)
+            self.process_book_title_and_fetch_details(message)
+
         # @self.bot.message_handler(regexp=self.books_chat_patterns["wishlist_book"])
         # def regex_wishlist_book(message: telebot.types.Message) -> None:
         #     self.current_book_status = WISHLIST
@@ -570,6 +590,38 @@ class ChatBot:
             """
             self.current_user_id = message.from_user.id
             self.current_book_status = CURRENTLY_READING
+            self.process_book_info_directly = True
+            self.extract_book_title_from_regex(message)
+
+        @self.bot.message_handler(commands=["finishedabook"])
+        def command_reading_a_book(message: telebot.types.Message) -> None:
+            """
+            Handles the "/finishedabook" command and prompts the user for the book title.
+
+            Args:
+                message (telebot.types.Message): Incoming Telegram message object.
+
+            Returns:
+                None
+            """
+            self.current_user_id = message.from_user.id
+            self.current_book_status = COMPLETED
+            self.process_book_info_directly = True
+            self.extract_book_title_from_regex(message)
+
+        @self.bot.message_handler(commands=["wishlistabook"])
+        def command_reading_a_book(message: telebot.types.Message) -> None:
+            """
+            Handles the "/wishlistabook" command and prompts the user for the book title.
+
+            Args:
+                message (telebot.types.Message): Incoming Telegram message object.
+
+            Returns:
+                None
+            """
+            self.current_user_id = message.from_user.id
+            self.current_book_status = WISHLIST
             self.process_book_info_directly = True
             self.extract_book_title_from_regex(message)
 

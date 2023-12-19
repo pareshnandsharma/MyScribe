@@ -25,7 +25,7 @@ class BookBot:
         # "reading_pages": r"(read)?\s?(?P<number_of_pages>\d+)\s?page(s)?\s?(of|from)\s?(?<book_name>.+?)(
         # ?=today|yesterday|now|recently|currently|\.|$)",
         "reading_a_book": r"(?i)(reading|going through)\s(?P<book_name>.+?)(?=recently|now|currently|nowadays|\.|$)",
-        "book_wishlist": None,
+        "book_wishlist": r"(?i)(want to|wishlist)\s(?P<book_name>.+?)(?=\.|$)",
         "book_finished": r"(?i)(have read|read|finished|completed)\s(?P<book_name>.+?)(?=recently|yesterday|today|\.|$)",
         "reading_speed": r"(reading speed|speed test|)",
         "greetings": r"(?i)^(hi|hello|hiya|hola|sup|hey)",
