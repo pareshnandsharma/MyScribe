@@ -883,5 +883,5 @@ class ChatBot:
         self.bot.infinity_polling()
 
 
-cb = ChatBot()
-cb.chat()
+chatbot = ChatBot()
+chatbot.chat()

@@ -93,5 +93,6 @@ build/
 *.xlsx~
 *.xls~
 
+config/
 # Environment variables
 .env
