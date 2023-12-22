@@ -1,12 +1,14 @@
-from typing import Optional
+import os
 
 import requests
 import bs4
+from dotenv import  load_dotenv
 
+load_dotenv()
 # Google Custom Search Engine (CSE) credentials
-GOOGLE_SE_ID = "1411e694edc7b4f63"
-GOOGLE_SE_API = "AIzaSyA89Ic5eHaWXk6wzxvjT0BRl2o8Aar5GDE"
-GOOGLE_SE_URL = "https://www.googleapis.com/customsearch/v1?[parameters]"
+GOOGLE_SE_ID = os.getenv("GOOGLE_SEARCH_ID")
+GOOGLE_SE_API = os.getenv("GOOGLE_SEARCH_API")
+GOOGLE_SE_URL = os.getenv("GOOGLE_BOOKS_URL")
 
 
 class BookWebScraping:

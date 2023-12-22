@@ -1,5 +1,9 @@
+import os
 import sqlite3
 from typing import Optional
+from dotenv import  load_dotenv
+
+load_dotenv()
 
 AVG_READING_SPEED = 300  # WPM (Words Per Minute)
 AVG_WORDS_PER_PAGE = 300
@@ -11,7 +15,7 @@ class BookDatabase:
     """
     def __init__(self):
         self.current_book_id = None
-        self.conn = sqlite3.connect("myscribe.db", check_same_thread=False)
+        self.conn = sqlite3.connect(os.getenv("MYSCRIBE_DATABASE"), check_same_thread=False)
         self.cur = self.conn.cursor()
 
     def insert_username_and_id(self, telegram_id: int, username: str, reading_speed: int = AVG_READING_SPEED) -> bool:

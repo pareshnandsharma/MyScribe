@@ -1,4 +1,9 @@
+import os
+
 from telebot import TeleBot, types, util
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class TelegramBot:
@@ -15,7 +20,7 @@ class TelegramBot:
     Methods:
         __init__(self): Initializes the bot with the bot token and parses mode.
     """
-    TOKEN = "6904546698:AAGAYbygYhFgEd1ZILf7eXyJ4FDDTK3rDKw"
+    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
     def __init__(self):
         self.bot = TeleBot(self.TOKEN, parse_mode=None)

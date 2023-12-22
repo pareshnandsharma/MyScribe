@@ -1,14 +1,18 @@
+import os
+
 import requests
 from book_webscraping import BookWebScraping
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class BookApi:
     """
     Facilitates interactions with the Google Books API to retrieve book details.
     """
 
-    API = "AIzaSyB0_24AJ9EPevq8PYrjua-E8PTFHwoKcWE"
-    URL = "https://www.googleapis.com/books/v1/volumes"
+    API = os.getenv("GOOGLE_BOOKS_API")
+    URL = os.getenv("GOOGLE_BOOKS_URL")
 
     def __init__(self):
         self.book_search_result = None
