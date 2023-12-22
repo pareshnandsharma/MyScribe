@@ -6,6 +6,9 @@ AVG_WORDS_PER_PAGE = 300
 
 
 class BookDatabase:
+    """
+    Facilitates interactions with the MyScribe's database.
+    """
     def __init__(self):
         self.current_book_id = None
         self.conn = sqlite3.connect("myscribe.db", check_same_thread=False)
@@ -114,7 +117,7 @@ class BookDatabase:
         self.cur.execute("SELECT * FROM books WHERE title = ?", (book_title,))
         return self.cur.rowcount != 0
 
-    def fetch_book_details_from_db(self, book_title: str) -> Optional[dict]:
+    def fetch_book_details_from_db(self, book_title: str) -> dict | None:
         """
         Fetches book details from the database based on the provided book title.
 
@@ -143,7 +146,16 @@ class BookDatabase:
             else:
                 return None
 
-    def retrieve_book_id(self, book_title: str) -> Optional[int]:
+    def retrieve_book_id(self, book_title: str) -> int | None:
+        """
+        Retrieves the unique ID of a book from the database, given its title.
+
+        Args:
+            book_title (str): The title of the book to search for.
+
+        Returns:
+            int | None: The ID of the book if found, otherwise None.
+        """
         self.cur.execute("SELECT id FROM books WHERE title = ?", (book_title,))
         book_id = self.cur.fetchone()
         if book_id:
@@ -152,7 +164,16 @@ class BookDatabase:
         else:
             return None
 
-    def retrieve_total_pages(self, book_title):
+    def retrieve_total_pages(self, book_title: str) -> int | None:
+        """
+        Retrieves the total number of pages for a specified book from the database.
+
+        Args:
+            book_title (str): The title of the book to search for.
+
+        Returns:
+            int | None: The total number of pages if found, otherwise None.
+        """
         try:
             self.cur.execute("SELECT total_pages FROM books WHERE title = ?", (book_title,))
             total_pages = self.cur.fetchone()
@@ -165,7 +186,7 @@ class BookDatabase:
             else:
                 return None
 
-    def check_if_book_status_exists(self, telegram_id: int, book_title: str) -> Optional[int]:
+    def check_if_book_status_exists(self, telegram_id: int, book_title: str) -> int | None:
         """
         Retrieves the book's status (currently reading, completed, or wishlist) for a specific user if it exists in the database.
 
@@ -187,7 +208,17 @@ class BookDatabase:
         else:
             return False
 
-    def retrieve_pages_read(self, telegram_id, book_title) -> Optional[int]:
+    def retrieve_pages_read(self, telegram_id, book_title) -> int:
+        """
+        Retrieves the number of pages read by a user for a specific book from the database.
+
+        Args:
+            telegram_id (int): The unique identifier of the user in Telegram.
+            book_title (str): The title of the book to retrieve reading progress for.
+
+        Returns:
+            int : The number of pages read if found, otherwise 0 to indicate no progress.
+        """
         book_id = self.retrieve_book_id(book_title)
         self.cur.execute("SELECT pages_read FROM books_and_users WHERE user_id = ? AND book_id = ?",
                          (telegram_id, book_id))
@@ -197,7 +228,16 @@ class BookDatabase:
         else:
             return 0
 
-    def retrieve_reading_speed(self, telegram_id):
+    def retrieve_reading_speed(self, telegram_id: int) -> int | None:
+        """
+        Retrieves the user's reading speed from the database.
+
+        Args:
+            telegram_id (int): The unique identifier of the user in Telegram.
+
+        Returns:
+            int | None: The user's reading speed if found, otherwise None.
+        """
         try:
             self.cur.execute("SELECT reading_speed FROM users WHERE id = ?", (telegram_id,))
             reading_speed = self.cur.fetchone()
@@ -209,7 +249,19 @@ class BookDatabase:
             else:
                 return None
 
-    def retrieve_reading_time_left(self, telegram_id, book_title):
+    def retrieve_reading_time_left(self, telegram_id: int, book_title: str) -> str:
+        """
+        Retrieves the user's estimated reading time left for a specific book from the database.
+        If not found, updates the time left and then retrieves it.
+
+        Args:
+            telegram_id (int): The unique identifier of the user in Telegram.
+            book_title (str): The title of the book to retrieve reading time left for.
+
+        Returns:
+            str | None: The estimated reading time left as a formatted string, otherwise None.
+        """
+
         book_id = self.retrieve_book_id(book_title)
         try:
             self.cur.execute("SELECT time_left FROM books_and_users WHERE user_id = ? AND book_id = ?",
@@ -246,7 +298,17 @@ class BookDatabase:
             print(e)
             return False
 
-    def update_reading_time_left(self, telegram_id, book_title):
+    def update_reading_time_left(self, telegram_id: int, book_title: str) -> bool:
+        """
+        Updates the user's estimated reading time left for a specific book in the database.
+
+        Args:
+            telegram_id (int): The unique identifier of the user in Telegram.
+            book_title (str): The title of the book to update the time left for.
+
+        Returns:
+            bool: True if the update was successful, False otherwise.
+        """
         book_id = self.retrieve_book_id(book_title)
         reading_time_left = self.calculate_reading_time_left(telegram_id, book_title)
         print(reading_time_left)
@@ -260,7 +322,18 @@ class BookDatabase:
         else:
             return True
 
-    def update_pages_read(self, telegram_id, book_title, pages_read) -> bool:
+    def update_pages_read(self, telegram_id: int, book_title: str, pages_read: int) -> bool:
+        """
+        Updates the number of pages read by a user for a specific book in the database.
+
+        Args:
+            telegram_id (int): The unique identifier of the user in Telegram.
+            book_title (str): The title of the book to update the pages read for.
+            pages_read (int): The number of pages recently read by the user.
+
+        Returns:
+            bool: True if the update was successful, False otherwise.
+        """
         book_id = self.retrieve_book_id(book_title)
         pages_read_yet = self.retrieve_pages_read(telegram_id, book_title)
         if pages_read:
@@ -282,7 +355,17 @@ class BookDatabase:
             self.update_reading_time_left(telegram_id, book_title)
             return True
 
-    def calculate_reading_time_left(self, telegram_id, book_title):
+    def calculate_reading_time_left(self, telegram_id: int, book_title: str) -> int:
+        """
+        Calculates the estimated reading time left for a user to finish a specific book.
+
+        Args:
+            telegram_id (int): The unique identifier of the user in Telegram.
+            book_title (str): The title of the book to calculate the time left for.
+
+        Returns:
+            int: The estimated reading time left in minutes.
+        """
         user_reading_speed = self.retrieve_reading_speed(telegram_id)
         total_pages = self.retrieve_total_pages(book_title)
         pages_read = self.retrieve_pages_read(telegram_id, book_title)

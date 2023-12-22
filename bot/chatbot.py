@@ -12,8 +12,16 @@ WISHLIST = 3
 
 
 class ChatBot:
+    """
+    Manages interactions with users, handles incoming messages, and interacts with other classes to provide book-related
+    functionalities.
+    """
 
     def __init__(self):
+        """
+        Initializes instances of TelegramBot, BookBot, BookDatabase, and LargeTexts classes for communication, data
+        retrieval, and database interactions.
+        """
         self.current_user_id = None
         self._current_book_title = None
         self.current_book_author = None
@@ -37,11 +45,23 @@ class ChatBot:
         self.large_texts = LargeTexts()
 
     @property
-    def current_book_title(self):
+    def current_book_title(self) -> str:
+        """
+        Retrieves the current book title being tracked for the user.
+
+        Returns:
+            str | None: The current book title (lower-cased) or None if no title is set.
+        """
         return self._current_book_title
 
     @current_book_title.setter
-    def current_book_title(self, value):
+    def current_book_title(self, value: str) -> None:
+        """
+        Sets the current book title for the user, ensuring consistent formatting.
+
+        Args:
+            value (str | None): The new book title to set. If None, clears the current title.
+        """
         if value:
             self._current_book_title = value.lower()
         else:
@@ -336,18 +356,43 @@ class ChatBot:
         # Converts reading speed to integer and returns it
         return int(reading_speed)
 
-    def insert_book_status(self, message):
+    def insert_book_status(self, message: telebot.types.Message) -> None:
+        """
+        Handles the insertion of a book status for the user, ensuring data consistency and providing feedback.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object containing the user's input.
+
+        Returns:
+            None
+        """
+        # Check if the book status already exists for the user
         if self.book_database.check_if_book_status_exists(self.current_user_id, self.current_book_title):
+            # If it does, process the status directly
             self.process_book_status(message)
         else:
+            # Attempt to insert the new book status into the database
             if not self.book_database.insert_book_status(self.current_user_id, self.current_book_title,
                                                          self.current_book_status):
+                # Handle unsuccessful insertion and notify the user
                 self.bot.send_message(message.chat.id, "Sorry There was an error. Please Try Again")
             else:
+                # If insertion is successful, proceed with further processing
                 self.process_book_status(message)
 
-    def update_reading_time_left(self, message):
+    def update_reading_time_left(self, message: telebot.types.Message) -> None:
+        """
+        Updates the estimated reading time left for a book in the database and provides feedback to the user.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object containing the user's input.
+
+        Returns:
+            None
+        """
+        # Attempt to update the reading time left in the database
         if not self.book_database.update_reading_time_left(self.current_user_id, self.current_book_title):
+            # Handle unsuccessful update and notify the user
             self.bot.send_message(message.chat.id, "Sorry There was an Error.")
 
     # def retrieve_book_status(self, message: telebot.types.Message):
@@ -357,72 +402,172 @@ class ChatBot:
     #     else:
     #         self.process_book_status(message)
 
-    def process_book_status(self, message):
+    def process_book_status(self, message: telebot.types.Message) -> None:
+        """
+        Routes book-related actions based on the current book status, ensuring proper handling of different states.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object containing the user's input.
+
+        Returns:
+            None
+        """
+        # **Decision-Making based on Book Status:**
+        # - Directs the processing flow to appropriate functions for handling books in different states.
         if self.current_book_status == CURRENTLY_READING:
             self.process_currently_reading_book(message)
         elif self.current_book_status == COMPLETED:
             self.process_completed_books(message)
         elif self.current_book_status == WISHLIST:
             self.process_wishlisted_books(message)
+        # **Reset Book Information:**
+        # - Ensures clean state for subsequent interactions by clearing book-related variables.
+        self.reset_book_name_and_search_count()
 
     def process_currently_reading_book(self, message):
+        """
+        Handles interactions for a book that the user is currently reading, providing reading progress updates and
+        enabling page tracking.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object containing the user's input.
+
+        Returns:
+            None
+        """
+
+        # **Retrieve and Display Reading Time Left:**
+        # - Fetches the estimated reading time left from the database.
+        # - Converts it to a user-friendly format and presents it to the user.
         reading_time_left = self.retrieve_and_convert_reading_time_left()
         self.bot.send_message(message.chat.id, f"Time left to complete the book {reading_time_left}")
+        # **Check for Existing Page Progress:**
+        # - Retrieves the number of pages already read from the database.
+        # - Tailors the message to the user based on whether progress has been recorded previously.
         total_pages_read = self.book_database.retrieve_pages_read(self.current_user_id, self.current_book_title)
         if total_pages_read:
             self.bot.send_message(message.chat.id,
                                   f"Wow !! you have already read {total_pages_read}. How many pages more have you read ?")
         else:
             self.bot.send_message(message.chat.id, f"How Many pages have you read?")
+        # - Registers a handler to capture the user's response and update the number of pages read accordingly.
         self.bot.register_next_step_handler(message, self.update_pages_read)
 
-    def update_pages_read(self, message):
+    def update_pages_read(self, message: telebot.types.Message) -> None:
+        """
+        Updates the number of pages read for a book in the database, handles completion scenarios, and provides feedback to the user.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object containing the user's input (number of pages read).
+
+        Returns:
+            None
+        """
         pages_read_today = message.text
+        # Ensures the input is a valid number of pages (positive integer)
         if pages_read_today.isdigit() and int(pages_read_today) > 0:
             pages_read_today = int(pages_read_today)
+
+            # **Retrieve Page Progress and Book Information:**
+            # - Fetches existing page progress and total pages from the database.
             total_pages_read = self.book_database.retrieve_pages_read(self.current_user_id, self.current_book_title)
             total_pages = self.book_database.retrieve_total_pages(self.current_book_title)
+
+            # **Check for Book Completion:**
+            # - Determines if the user has finished reading the book based on the updated page count.
             if total_pages_read + pages_read_today >= total_pages:
                 self.current_book_status = COMPLETED
                 self.insert_book_status(message)
             else:
+                # **Update Pages Read in Database:**
+                # - Attempts to update the number of pages read in the database.
                 if self.book_database.update_pages_read(self.current_user_id, self.current_book_title,
                                                         int(pages_read_today)):
+                    # **Provide Updated Progress Information:**
+                    # - Retrieves and displays the updated page progress and estimated reading time left.
                     total_pages_read = self.book_database.retrieve_pages_read(self.current_user_id,
                                                                               self.current_book_title)
                     reading_time_left = self.retrieve_and_convert_reading_time_left()
                     self.bot.send_message(message.chat.id,
                                           f"You have read {total_pages_read} out of {total_pages}. Total time left in finishing the book {reading_time_left}")
                 else:
+                    # **Handle Database Error:**
+                    # - Informs the user if the update was unsuccessful.
                     self.bot.send_message(message.chat.id, "SORRY ERROR")
         else:
+            # **Request Valid Input:**
+            # - Prompts the user to enter a valid number of pages if the initial input was invalid.
             self.bot.send_message(message.chat.id, "Please enter number of pages read:")
             self.bot.register_next_step_handler(message, self.update_pages_read)
 
-    def process_completed_books(self, message):
+    def process_completed_books(self, message: telebot.types.Message) -> None:
+        """
+        Handles interactions for a book that the user has completed, prompting for a rating and updating data accordingly.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object containing the user's input.
+
+        Returns:
+            None
+        """
+
+        # **Clear Page Progress:**
+        # - Sets the number of pages read to None in the database, indicating completion.
         self.book_database.update_pages_read(self.current_user_id, self.current_book_title, None)
+
+        # - Sends a celebratory message to the user for finishing the book.
+        # - Prompts the user to provide a rating from 1 to 5.
         self.bot.send_message(message.chat.id,
                               f"Congratulations on finishing {self.current_book_title}. Please give it a rating "
                               f"from 1-5 (5 being the highest)")
+        # - Registers a handler to capture the user's rating and store it in the database.
         self.bot.register_next_step_handler(message, self.insert_book_rating)
 
-    def insert_book_rating(self, message):
+    def insert_book_rating(self, message: telebot.types.Message) -> None:
+        """
+        Stores a book rating provided by the user in the database and provides feedback.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object containing the user's rating.
+
+        Returns:
+            None
+        """
+
+        # **Extract and Validate Rating:**
         book_rating = message.text
         if book_rating.isdigit():
             if 0 < int(book_rating) <= 5:
+                # **Store Valid Rating in Database:**
                 if self.book_database.insert_book_rating(self.current_user_id, self.current_book_title, book_rating):
+                    # **Confirm Rating Storage:**
                     self.bot.send_message(message.chat.id,
                                           f"You rated {self.current_book_title} {book_rating} out of 5")
                 else:
+                    # **Handle Database Error:**
                     self.bot.send_message(message.chat.id, "There was an error please try again.")
             else:
+                # **Request Valid Rating:**
                 self.bot.send_message(message.chat.id, "Please give a rating between 1-5")
                 self.bot.register_next_step_handler(message, self.insert_book_rating)
         else:
+            # **Request Valid Input:**
             self.bot.send_message(message.chat.id, "Please give a rating between 1-5")
             self.bot.register_next_step_handler(message, self.insert_book_rating)
 
-    def process_wishlisted_books(self, message):
+    def process_wishlisted_books(self, message: telebot.types.Message) -> None:
+        """
+        Sends a confirmation message to the user for successfully adding a book to their wishlist.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object (not used in this function).
+
+        Returns:
+            None
+        """
+
+        # **Send Wishlist Confirmation:**
+        # - Informs the user that the book has been successfully added to their wishlist.
         self.bot.send_message(message.chat.id,
                               f"Congratulations!! You have successfully added {self.current_book_title} "
                               f"to your wishlist.")
@@ -443,6 +588,36 @@ class ChatBot:
         minutes = int(total_minutes_left % 60)
         return f"{hours} hours and {minutes} minutes"
 
+    def find_recommendation(self, message: telebot.types.Message) -> None:
+        """
+        Retrieves book recommendations based on the user's input, handles potential errors, and provides feedback.
+
+        Args:
+            message (telebot.types.Message): The Telegram message object containing the user's book title input.
+
+        Returns:
+            None
+        """
+
+        # **Set Expectation for Potential Delay:**
+        self.bot.send_message(message.chat.id, "This may take a while. Please Wait")
+
+        # **Capture Book Title and Retrieve Recommendations:**
+        self.current_book_title = message.text
+        recommended_books_list = self.book_bot.get_book_recommendations(self.current_book_title)
+
+        # **Handle Successful Recommendation Retrieval:**
+        if recommended_books_list:
+            # Present the recommendations to the user
+            self.bot.send_message(message.chat.id, recommended_books_list)
+        else:
+            # Handle error gracefully and prompt for retry
+
+            self.bot.send_message(message.chat.id, "There was an error. Please try again")
+
+        # **Reset Book Information for Subsequent Interactions:**
+        self.reset_book_name_and_search_count()
+
     def chat(self):
         """
         Handles all incoming messages and callback handlers.
@@ -455,6 +630,7 @@ class ChatBot:
         """
 
         @self.bot.message_handler(commands=["start"])
+        @self.bot.message_handler(regexp=self.books_chat_patterns["greetings"])
         def command_start(message: telebot.types.Message) -> None:
             """
             Handles the `/start` command and related greeting messages.
@@ -652,20 +828,57 @@ class ChatBot:
         @self.bot.callback_query_handler(
             lambda query: query.data in ["change_genre", "change_language", "no_change_req"])
         def confirm_and_insert_new_book(query):
+            """
+            Processes callback queries related to confirming and inserting new book details,
+            handling genre and language modifications if requested.
+
+            Args:
+                query (telebot.types.CallbackQuery): The callback query object containing user's selection.
+
+            Returns:
+                None
+            """
+
+            # Identify User and Remove Inline Keyboard:
             self.current_user_id = query.from_user.id
             self.bot.edit_message_reply_markup(query.message.chat.id, query.message.id, reply_markup=[])
+            # Handle "No Change Required" Scenario:
             if query.data == "no_change_req":
                 self.current_book_title = self.book_bot.book_title
                 if self.book_database.insert_book_details(self.book_bot):
+                    # Successfully inserted, proceed to book status handling
                     self.insert_book_status(query.message)
                 else:
+                    # Database error, inform the user
                     self.bot.send_message(query.message.chat.id,
                                           "I am sorry!\nThere was an error while saving book details. Please Try Again.")
+
+            # Handle Genre Change Request:
             elif query.data == "change_genre":
                 self.bot.send_message(query.message.chat.id, "Please enter genre.")
                 self.bot.register_next_step_handler(query.message, self.change_book_genre)
+
+            # Handle Language Change Request:
             elif query.data == "change_language":
                 self.bot.register_next_step_handler(query.message, self.change_book_language)
+
+        @self.bot.message_handler(commands=["recommendabook"])
+        def command_recommend_a_book(message):
+            """
+            Initiates the book recommendation process by prompting the user for a book title and registering a handler for their response.
+
+            Args:
+                message (telebot.types.Message): The Telegram message object containing the command.
+
+            Returns:
+                None
+            """
+
+            # Greet User and Request Book Title for Recommendation
+            self.bot.send_message(message.chat.id,
+                                  "Hi !! I can recommend you similar books. Please enter a book's name for recommendation : ")
+            # Prepare for Recommendation Retrieval:
+            self.bot.register_next_step_handler(message, self.find_recommendation)
 
         self.bot.infinity_polling()
 

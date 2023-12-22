@@ -3,6 +3,10 @@ from book_webscraping import BookWebScraping
 
 
 class BookApi:
+    """
+    Facilitates interactions with the Google Books API to retrieve book details.
+    """
+
     API = "AIzaSyB0_24AJ9EPevq8PYrjua-E8PTFHwoKcWE"
     URL = "https://www.googleapis.com/books/v1/volumes"
 
@@ -53,7 +57,7 @@ class BookApi:
 
         # Return the search result
         self.api_search_result = response.json()
-        print(self.api_search_result)
+        # print(self.api_search_result)
         return self.api_search_result['totalItems'] != 0
 
     def extract_book_details_from_api_result(self, search_result_count) -> dict | None:
@@ -146,3 +150,4 @@ class BookApi:
                 self.api_book_details['book_title'], self.api_book_details['book_author'])
 
         return self.api_book_details
+

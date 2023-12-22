@@ -36,3 +36,7 @@ class TelegramBot:
             'Change Language': {'callback_data': 'change_language'},
             'Everything Looks Good!': {'callback_data': 'no_change_req'},
         }, row_width=2)
+        self.recommendation_markup = util.quick_markup({
+            'Wishlist': {'callback_data': 'recommendation_wishlist'},
+            'Next Recommendation': {'callback_data': 'recommendation_next_book'},
+        }, row_width=1)

@@ -1,11 +1,18 @@
 import re
 from book_api import BookApi
 from book_database import BookDatabase
+from book_webscraping import BookWebScraping
 
 
 class BookBot:
+    """
+    Encapsulates book-related information and functionalities for a Telegram bot.
+    """
 
     def __init__(self):
+        """
+        Initializes book attributes and essential objects for interactions.
+        """
         self.book_caption = None
         self.book_title = None
         self.book_author = None
@@ -20,6 +27,7 @@ class BookBot:
 
         self.book_api = BookApi()
         self.book_database = BookDatabase()
+        self.book_webscraping = BookWebScraping()
 
     books_chat_patterns = {
         # "reading_pages": r"(read)?\s?(?P<number_of_pages>\d+)\s?page(s)?\s?(of|from)\s?(?<book_name>.+?)(
@@ -86,22 +94,67 @@ class BookBot:
             self.book_title = None
             return False
 
-    def get_book_details_from_db(self, current_book_title):
+    def get_book_details_from_db(self, current_book_title: str) -> bool:
+        """
+        Retrieves book details from the database and populates the object's attributes.
+
+        Args:
+            current_book_title (str): The title of the book to search for in the database.
+
+        Returns:
+            bool: True if book details were found and populated, False otherwise.
+        """
+        # Retrieve book details from the database using the provided title
         book_details = self.book_database.fetch_book_details_from_db(current_book_title)
+
+        # If book details were found:
         if book_details:
+            # Populate the object's attributes with the retrieved details
             for key, value in book_details.items():
                 setattr(self, key, value)
-            return True
+            return True  # Indicate successful retrieval
         else:
-            return False
+            return False  # Indicate unsuccessful retrieval
 
-    def validate_pages_read(self, pages_read_today):
+    def validate_pages_read(self, pages_read_today: str) -> int | None:
+        """
+        Validates whether the input represents a valid number of pages read.
+
+        Args:
+            pages_read_today (str): The input string representing the number of pages read.
+
+        Returns:
+            int | None: The validated integer value of pages read, or None if invalid.
+        """
+
+        # Check if the input is a positive integer
         if pages_read_today.isdigit() and int(pages_read_today) > 0:
+            # Convert the string to an integer and return it
             return int(pages_read_today)
         else:
+            # Return None to indicate invalid input
             return None
 
+    def get_book_recommendations(self, book_title: str) -> str:
+        """
+        Retrieves book recommendations from Goodreads based on a given book title.
 
+        Args:
+            book_title (str): The title of the book for which to find recommendations.
+
+        Returns:
+            str: A formatted string containing a list of recommended book titles and authors.
+        """
+
+        # Fetch recommendations using web scraping
+        recommended_books_and_authors = self.book_webscraping.scrap_book_recommendations(book_title)
+
+        # Construct a formatted message for presenting the recommendations
+        recommended_books_message = ""
+        print(recommended_books_and_authors)
+        for book_title, author_name in recommended_books_and_authors.items():
+            recommended_books_message += f"{book_title} by {author_name}\n\n"
+        return recommended_books_message  # Return the formatted recommendation message
 
     @property
     def complete_book_details(self):
@@ -111,4 +164,5 @@ class BookBot:
                f"Language : {self.book_language}\n" \
                f"Total Pages : {self.book_total_page_count}\n" \
                f"ISBN13 : {self.book_isbn13}\n\n"
+
 

@@ -9,8 +9,6 @@ GOOGLE_SE_API = "AIzaSyA89Ic5eHaWXk6wzxvjT0BRl2o8Aar5GDE"
 GOOGLE_SE_URL = "https://www.googleapis.com/customsearch/v1?[parameters]"
 
 
-
-
 class BookWebScraping:
     def extract_genre(self, genre_tag: bs4.element.Tag) -> str:
         """
@@ -91,3 +89,56 @@ class BookWebScraping:
             lang = None
 
         return genre, lang
+
+    def scrap_book_recommendations(self, book_title):
+        """
+        Scrapes book recommendations from Goodreads for a given book title, prioritizing ethical scraping practices.
+
+        Args:
+            book_title (str): The title of the book to get recommendations for.
+
+        Returns:
+            dict: A dictionary of recommended books and their authors, in the format {book_title: author_name}.
+        """
+        book_title.replace(" ", "+")
+        query = f"books+similar+to+{book_title}+goodreads"
+        # Set parameters for Google Custom Search Engine (CSE) API request
+        url = f"https://google.com/search?q=books+similar+to+{book_title}+goodreads"
+
+        # Fetch the URL data using requests.get(url),
+        # store it in a variable, request_result.
+        response = requests.get(url)
+
+        soup = bs4.BeautifulSoup(response.text, "html.parser")
+        links = soup.findAll('div', class_='kCrYT')
+
+        # print(links)
+        for link in links:
+            try:
+                url_link = link.a['href'][7:]
+            except TypeError:
+                continue
+            else:
+                break
+
+        # print(url_link)
+        request_result = requests.get(url_link)
+        soup = bs4.BeautifulSoup(request_result.text,
+                                 "html.parser")
+
+        books = []
+        authors = []
+        recommended_books_and_authors = {}
+        book_titles = soup.findAll('span', itemprop='name')[2:]
+        for i in range(len(book_titles)):
+            if i % 2 == 0:
+                books.append(book_titles[i].text)
+            else:
+                authors.append(book_titles[i].text)
+
+        # print("Books Recommendations : ")
+        # print(books, authors)
+        for book, author in zip(books, authors):
+            recommended_books_and_authors[book] = author
+
+        return recommended_books_and_authors
